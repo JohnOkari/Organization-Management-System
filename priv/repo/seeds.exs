@@ -1,11 +1,20 @@
-# Script for populating the database. You can run it as:
-#
-#     mix run priv/repo/seeds.exs
-#
-# Inside the script, you can read and write to any of your
-# repositories directly:
-#
-#     OrgManagementSystem.Repo.insert!(%OrgManagementSystem.SomeSchema{})
-#
-# We recommend using the bang functions (`insert!`, `update!`
-# and so on) as they will fail if something goes wrong.
+alias OrgManagementSystem.Repo
+alias OrgManagementSystem.{User, Role, Permission}
+
+# Create superuser
+Repo.insert!(%User{
+  name: "Super Admin",
+  email: "superadmin@example.com",
+  password_hash: Bcrypt.hash_pwd_salt("supersecurepassword"),
+  is_superuser: true
+})
+
+# Create roles
+admin_role = Repo.insert!(%Role{name: "Admin"})
+reviewer_role = Repo.insert!(%Role{name: "Reviewer"})
+member_role = Repo.insert!(%Role{name: "Member"})
+
+# Create permissions
+Repo.insert!(%Permission{name: "edit_organization", role_id: admin_role.id})
+Repo.insert!(%Permission{name: "grant_roles", role_id: admin_role.id})
+Repo.insert!(%Permission{name: "view_invited_users", role_id: reviewer_role.id})
