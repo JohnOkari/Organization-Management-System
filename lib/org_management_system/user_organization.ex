@@ -2,6 +2,7 @@ defmodule OrgManagementSystem.UserOrganization do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive {Jason.Encoder, only: [:id, :user_id, :organization_id, :role_id, :inserted_at, :updated_at]}
   schema "user_organizations" do
 
     field :user_id, :id

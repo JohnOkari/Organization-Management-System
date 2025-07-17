@@ -15,6 +15,7 @@ defmodule OrgManagementSystemWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug OrgManagementSystemWeb.ApiAuthPlug
   end
 
   scope "/", OrgManagementSystemWeb do
@@ -81,5 +82,30 @@ defmodule OrgManagementSystemWeb.Router do
       live "/users/confirm/:token", UserConfirmationLive, :edit
       live "/users/confirm", UserConfirmationInstructionsLive, :new
     end
+  end
+
+  scope "/api", OrgManagementSystemWeb do
+    pipe_through :api
+
+    # User management
+    post "/invite_user", UserManagementController, :invite_user
+    post "/approve_user", UserManagementController, :approve_user
+    post "/assign_role", UserManagementController, :assign_role
+    get "/users_by_stage", UserManagementController, :users_by_stage
+    post "/review_user", UserManagementController, :review_user
+    post "/login", UserManagementController, :login
+
+    # Organization CRUD
+    get "/organizations", OrganizationController, :index
+    get "/organizations/:id", OrganizationController, :show
+    post "/organizations", OrganizationController, :create
+    put "/organizations/:id", OrganizationController, :update
+    delete "/organizations/:id", OrganizationController, :delete
+
+    # Role management
+    post "/organizations/:org_id/assign_role", RoleManagementController, :assign_role
+    get "/organizations/:org_id/users", RoleManagementController, :list_org_users
+
+
   end
 end

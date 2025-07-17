@@ -7,6 +7,11 @@ defmodule OrgManagementSystem.Accounts do
   alias OrgManagementSystem.Repo
 
   alias OrgManagementSystem.Accounts.{User, UserToken, UserNotifier}
+  alias OrgManagementSystem.UserReview
+  alias OrgManagementSystem.Organization
+  alias OrgManagementSystem.UserOrganization
+  alias OrgManagementSystem.Role
+  alias OrgManagementSystem.Permission
 
   ## Database getters
 
@@ -30,12 +35,17 @@ defmodule OrgManagementSystem.Accounts do
 
 
   def has_permission?(user, org_id, permission_name) do
-    from(uo in OrgManagementSystem.UserOrganization,
-      join: r in Role, on: uo.role_id == r.id,
-      join: p in Permission, on: p.role_id == r.id,
-      where: uo.user_id == ^user.id and uo.organization_id == ^org_id and p.name == ^permission_name
-    )
-    |> Repo.exists?()
+    cond do
+      user.is_superuser -> true
+      is_nil(org_id) -> false
+      true ->
+        from(uo in OrgManagementSystem.UserOrganization,
+          join: r in Role, on: uo.role_id == r.id,
+          join: p in Permission, on: p.role_id == r.id,
+          where: uo.user_id == ^user.id and uo.organization_id == ^org_id and p.name == ^permission_name
+        )
+        |> Repo.exists?()
+    end
   end
 
   @doc """
@@ -118,7 +128,7 @@ defmodule OrgManagementSystem.Accounts do
 
   """
   def change_user_registration(%User{} = user, attrs \\ %{}) do
-    User.registration_changeset(user, attrs, password_hash: false, validate_email: false)
+    User.registration_changeset(user, attrs, hash_password: false, validate_email: false)
   end
 
   ## Settings
@@ -212,7 +222,7 @@ defmodule OrgManagementSystem.Accounts do
 
   """
   def change_user_password(user, attrs \\ %{}) do
-    User.password_changeset(user, attrs, password_hash: false)
+    User.password_changeset(user, attrs, hash_password: false)
   end
 
   @doc """
@@ -377,5 +387,120 @@ defmodule OrgManagementSystem.Accounts do
       {:ok, %{user: user}} -> {:ok, user}
       {:error, :user, changeset, _} -> {:error, changeset}
     end
+  end
+
+  def invite_user(name, email, inviter) do
+    Repo.transaction(fn ->
+      user = Repo.get_by(User, email: email) ||
+             %User{name: name, email: email, password_hash: nil}
+             |> Repo.insert!()
+
+      %UserReview{user_id: user.id, status: "invited", reviewer_id: inviter.id}
+      |> Repo.insert!()
+
+      # Send invite email here (optional)
+      user
+    end)
+  end
+
+  # def approve_user(user_id, reviewer_id) do
+  #   review = Repo.get_by!(UserReview, user_id: user_id)
+  #   review
+  #   |> Ecto.Changeset.change(status: "approved", reviewer_id: reviewer_id)
+  #   |> Repo.update()
+  # end
+
+  def assign_role(user_id, org_id, role_id) do
+    attrs = %{user_id: user_id, organization_id: org_id, role_id: role_id}
+    Repo.insert!(%OrgManagementSystem.UserOrganization{} |> Ecto.Changeset.change(attrs), on_conflict: :replace_all, conflict_target: [:user_id, :organization_id])
+  end
+
+  def list_user_organizations(user) do
+    from(o in Organization,
+      join: uo in UserOrganization, on: uo.organization_id == o.id,
+      where: uo.user_id == ^user.id,
+      select: o
+    ) |> Repo.all()
+  end
+
+  def create_organization(attrs, creator_user) do
+    attrs = Map.put(attrs, :created_by_id, creator_user.id)
+    %Organization{}
+    |> Organization.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_organization(org, attrs) do
+    org
+    |> Organization.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def grant_role(user_id, org_id, role_id, granter_user) do
+    with {:ok, user_org} <- Repo.get_by(UserOrganization, user_id: user_id, organization_id: org_id),
+         :ok <- has_permission?(granter_user, org_id, "grant_role") do
+      user_org
+      |> Ecto.Changeset.change(role_id: role_id)
+      |> Repo.update()
+    else
+      {:error, :unauthorized} -> {:error, :unauthorized}
+      nil -> {:error, :not_found}
+    end
+  end
+
+  def list_organization_users(org_id) do
+    from(u in User,
+      join: uo in UserOrganization, on: uo.user_id == u.id,
+      join: r in Role, on: uo.role_id == r.id,
+      where: uo.organization_id == ^org_id,
+      select: %{user: u, role_id: uo.role_id, role_name: r.name}
+    ) |> Repo.all()
+  end
+
+  def user_in_organization?(%User{id: user_id}, org_id) do
+    Repo.exists?(
+      from uo in UserOrganization,
+        where: uo.user_id == ^user_id and uo.organization_id == ^org_id
+    )
+  end
+
+  def list_users_by_review_stage(stage, current_user) do
+    permission =
+      case stage do
+        "invited" -> "view_invited_users"
+        "reviewed" -> "review_reviewed_users"
+        "approved" -> "view_approved_users"
+        _ -> nil
+      end
+
+    if (permission && has_permission?(current_user, nil, permission)) or current_user.is_superuser do
+      import Ecto.Query
+      from(u in User,
+        join: ur in UserReview, on: ur.user_id == u.id,
+        where: ur.status == ^stage,
+        select: %{user: u, review: ur}
+      ) |> Repo.all()
+    else
+      []
+    end
+  end
+
+  def can_user_login?(user) do
+    review = Repo.get_by(UserReview, user_id: user.id)
+    review && review.status == "approved"
+  end
+
+  def review_user(user_id, reviewer_id) do
+    review = Repo.get_by!(UserReview, user_id: user_id)
+    review
+    |> Ecto.Changeset.change(status: "reviewed", reviewer_id: reviewer_id)
+    |> Repo.update()
+  end
+
+  def approve_user(user_id, approver_id) do
+    review = Repo.get_by!(UserReview, user_id: user_id)
+    review
+    |> Ecto.Changeset.change(status: "approved", reviewer_id: approver_id)
+    |> Repo.update()
   end
 end
