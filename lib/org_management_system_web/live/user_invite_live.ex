@@ -11,7 +11,7 @@ defmodule OrgManagementSystemWeb.UserInviteLive do
   end
 
   def handle_event("invite", %{"email" => email}, socket) do
-    case Accounts.invite_user(email, socket.assigns.current_user) do
+    case Accounts.invite_user("Invited User", email, socket.assigns.current_user) do
       {:ok, _user} ->
         {:noreply,
          socket

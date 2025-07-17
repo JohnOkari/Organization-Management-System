@@ -8,7 +8,7 @@ defmodule OrgManagementSystem.Accounts.UserNotifier do
     email =
       new()
       |> to(recipient)
-      |> from({"OrgManagementSystem", "contact@example.com"})
+      |> from({"Jiji Health", "engineering@jiji.health"})
       |> subject(subject)
       |> text_body(body)
 
@@ -72,6 +72,27 @@ defmodule OrgManagementSystem.Accounts.UserNotifier do
     #{url}
 
     If you didn't request this change, please ignore this.
+
+    ==============================
+    """)
+  end
+
+  @doc """
+  Deliver an invitation email with a temporary password to the user.
+  """
+  def deliver_invite_email(email, name, password) do
+    deliver(email, "You're invited to join OrgMgt!", """
+
+    ==============================
+
+    Hi #{name},
+
+    You have been invited to join OrgMgt.
+    Your temporary password is: #{password}
+
+    Please log in and change your password as soon as possible.
+
+    If you did not expect this invitation, you can ignore this email.
 
     ==============================
     """)

@@ -29,7 +29,16 @@ config :org_management_system, OrgManagementSystemWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :org_management_system, OrgManagementSystem.Mailer, adapter: Swoosh.Adapters.Local
+config :org_management_system, OrgManagementSystem.Mailer,
+  adapter: Swoosh.Adapters.SMTP,
+  relay: "pro.turbo-smtp.com",
+  username: "engineering@jiji.health",
+  password: "7PLRWsW3",
+  port: 587,
+  ssl: false,
+  tls: :always,
+  auth: :always,
+  domain: "damusasa.jiji.health"
 
 # Configure esbuild (the version is required)
 config :esbuild,

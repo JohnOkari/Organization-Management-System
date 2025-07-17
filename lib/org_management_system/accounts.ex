@@ -389,16 +389,27 @@ defmodule OrgManagementSystem.Accounts do
     end
   end
 
+  defp generate_random_password(length \\ 12) do
+    :crypto.strong_rand_bytes(length)
+    |> Base.url_encode64(padding: false)
+    |> binary_part(0, length)
+  end
+
   def invite_user(name, email, inviter) do
     Repo.transaction(fn ->
-      user = Repo.get_by(User, email: email) ||
-             %User{name: name, email: email, password_hash: nil}
-             |> Repo.insert!()
+      password = generate_random_password()
+      user =
+        Repo.get_by(User, email: email) ||
+          %User{name: name, email: email}
+          |> User.registration_changeset(%{password: password, password_confirmation: password})
+          |> Repo.insert!()
 
       %UserReview{user_id: user.id, status: "invited", reviewer_id: inviter.id}
       |> Repo.insert!()
 
-      # Send invite email here (optional)
+      # Send invite email with password
+      OrgManagementSystem.Accounts.UserNotifier.deliver_invite_email(email, name, password)
+
       user
     end)
   end
