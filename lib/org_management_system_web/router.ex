@@ -105,6 +105,7 @@ defmodule OrgManagementSystemWeb.Router do
     # Role management
     post "/organizations/:org_id/assign_role", RoleManagementController, :assign_role
     get "/organizations/:org_id/users", RoleManagementController, :list_org_users
+    post "/roles/:role_id/permissions", RoleManagementController, :add_permission
 
 
   end

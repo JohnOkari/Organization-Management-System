@@ -514,4 +514,40 @@ defmodule OrgManagementSystem.Accounts do
     |> Ecto.Changeset.change(status: "approved", reviewer_id: approver_id)
     |> Repo.update()
   end
+
+  @doc """
+  Add a permission to a role (many-to-many).
+
+  ## Examples
+
+      iex> add_permission_to_role("edit_organization", role_id)
+      {:ok, %OrgManagementSystem.RolePermission{}}
+
+      iex> add_permission_to_role("invalid_permission", role_id)
+      {:error, %Ecto.Changeset{}}
+  """
+  def add_permission_to_role(permission_name, role_id) do
+    role_id = if is_binary(role_id), do: String.to_integer(role_id), else: role_id
+    Repo.transaction(fn ->
+      # Find or create the permission
+      permission =
+        case Repo.get_by(Permission, name: permission_name) do
+          nil ->
+            %Permission{}
+            |> Permission.changeset(%{name: permission_name})
+            |> Repo.insert!()
+          perm -> perm
+        end
+
+      # Insert into join table
+      %OrgManagementSystem.RolePermission{}
+      |> Ecto.Changeset.change(%{role_id: role_id, permission_id: permission.id})
+      |> Repo.insert(on_conflict: :nothing)
+    end)
+    |> case do
+      {:ok, {:ok, role_permission}} -> {:ok, role_permission}
+      {:ok, role_permission} -> {:ok, role_permission}
+      {:error, _failed_op, changeset, _} -> {:error, changeset}
+    end
+  end
 end

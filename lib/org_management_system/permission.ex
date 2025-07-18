@@ -4,7 +4,8 @@ defmodule OrgManagementSystem.Permission do
 
   schema "permissions" do
     field :name, :string
-    field :role_id, :id
+
+    many_to_many :roles, OrgManagementSystem.Role, join_through: "roles_permissions"
 
     timestamps(type: :utc_datetime)
   end

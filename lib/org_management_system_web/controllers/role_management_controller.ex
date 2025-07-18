@@ -22,4 +22,16 @@ defmodule OrgManagementSystemWeb.RoleManagementController do
       conn |> put_status(:forbidden) |> json(%{error: "Access denied"})
     end
   end
+
+  def add_permission(conn, %{"role_id" => role_id, "permission_name" => permission_name}) do
+    case Accounts.add_permission_to_role(permission_name, role_id) do
+      {:ok, role_permission} ->
+        json(conn, %{
+          status: "ok",
+          role_id: role_permission.role_id,
+          permission_id: role_permission.permission_id
+        })
+      {:error, changeset} -> conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(changeset)})
+    end
+  end
 end
