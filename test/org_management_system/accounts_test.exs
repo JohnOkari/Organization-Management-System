@@ -500,9 +500,119 @@ defmodule OrgManagementSystem.AccountsTest do
     end
   end
 
+  describe "role and permission management" do
+    alias OrgManagementSystem.{Role, Permission, RolePermission}
+
+    setup do
+      # Create a role and a permission for testing
+      {:ok, role} = Repo.insert(%Role{name: "TestRole"})
+      {:ok, permission} = Repo.insert(%Permission{name: "test_permission"})
+      %{role: role, permission: permission}
+    end
+
+    test "add_permission_to_role/2 associates permission with role", %{role: role} do
+      assert {:ok, role_permission} = Accounts.add_permission_to_role("unique_permission", role.id)
+      assert role_permission.role_id == role.id
+
+      # The permission should exist and be associated
+      permission = Repo.get(Permission, role_permission.permission_id)
+      assert permission.name == "unique_permission"
+
+      # The association should exist in the join table
+      assert Repo.get_by(RolePermission, role_id: role.id, permission_id: permission.id)
+    end
+
+    test "add_permission_to_role/2 does not duplicate permissions", %{role: role, permission: permission} do
+      # First association
+      assert {:ok, _} = Accounts.add_permission_to_role(permission.name, role.id)
+      # Second association (should not error, should not duplicate)
+      assert {:ok, _} = Accounts.add_permission_to_role(permission.name, role.id)
+
+      # Only one permission with that name exists
+      assert Repo.aggregate(from(p in Permission, where: p.name == ^permission.name), :count, :id) == 1
+    end
+
+    test "role has many permissions through join table", %{role: role} do
+      Accounts.add_permission_to_role("perm1", role.id)
+      Accounts.add_permission_to_role("perm2", role.id)
+      role = Repo.preload(role, :permissions)
+      names = Enum.map(role.permissions, & &1.name)
+      assert "perm1" in names
+      assert "perm2" in names
+    end
+
+    test "permission can belong to multiple roles", %{permission: permission} do
+      {:ok, role2} = Repo.insert(%Role{name: "AnotherRole"})
+      assert {:ok, _} = Accounts.add_permission_to_role(permission.name, role2.id)
+      permission = Repo.preload(permission, :roles)
+      role_names = Enum.map(permission.roles, & &1.name)
+      assert "TestRole" in role_names
+      assert "AnotherRole" in role_names
+    end
+  end
+
   describe "inspect/2 for the User module" do
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
+    end
+  end
+
+  describe "organization management" do
+    alias OrgManagementSystem.{Organization, User, UserOrganization, Role}
+
+    setup do
+      {:ok, user} = Repo.insert(%User{
+        name: "Org Creator",
+        email: "orgcreator@example.com",
+        password_hash: Bcrypt.hash_pwd_salt("supersecurepassword"),
+        is_superuser: false
+      })
+      {:ok, role} = Repo.insert(%Role{name: "OrgAdmin"})
+      %{user: user, role: role}
+    end
+
+    test "create_organization/2 creates an organization with creator", %{user: user} do
+      attrs = %{name: "Test Org"}
+      {:ok, org} = Accounts.create_organization(attrs, user)
+      assert org.name == "Test Org"
+      assert org.created_by_id == user.id
+    end
+
+    test "update_organization/2 updates organization fields", %{user: user} do
+      {:ok, org} = Accounts.create_organization(%{name: "Old Name"}, user)
+      {:ok, updated_org} = Accounts.update_organization(org, %{name: "New Name"})
+      assert updated_org.name == "New Name"
+    end
+
+    test "assign_role/3 adds user to organization with role", %{user: user, role: role} do
+      {:ok, org} = Accounts.create_organization(%{name: "Role Org"}, user)
+      user_org = Accounts.assign_role(user.id, org.id, role.id)
+      assert user_org.user_id == user.id
+      assert user_org.organization_id == org.id
+      assert user_org.role_id == role.id
+    end
+
+    test "list_user_organizations/1 returns organizations for user", %{user: user, role: role} do
+      {:ok, org1} = Accounts.create_organization(%{name: "Org1"}, user)
+      {:ok, org2} = Accounts.create_organization(%{name: "Org2"}, user)
+      Accounts.assign_role(user.id, org1.id, role.id)
+      Accounts.assign_role(user.id, org2.id, role.id)
+      orgs = Accounts.list_user_organizations(user)
+      org_names = Enum.map(orgs, & &1.name)
+      assert "Org1" in org_names
+      assert "Org2" in org_names
+    end
+
+    test "user_in_organization?/2 returns true if user is in org", %{user: user, role: role} do
+      {:ok, org} = Accounts.create_organization(%{name: "Membership Org"}, user)
+      Accounts.assign_role(user.id, org.id, role.id)
+      assert Accounts.user_in_organization?(user, org.id)
+    end
+
+    test "user_in_organization?/2 returns false if user is not in org", %{user: user} do
+      {:ok, org} = Accounts.create_organization(%{name: "No Membership Org"}, user)
+      # Do not assign user to org
+      refute Accounts.user_in_organization?(user, org.id + 1000)
     end
   end
 end
