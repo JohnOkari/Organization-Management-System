@@ -435,7 +435,7 @@ defmodule OrgManagementSystem.Accounts do
   end
 
   def create_organization(attrs, creator_user) do
-    attrs = Map.put(attrs, :created_by_id, creator_user.id)
+    attrs = Map.put(attrs, "created_by_id", creator_user.id)
     %Organization{}
     |> Organization.changeset(attrs)
     |> Repo.insert()
@@ -561,6 +561,10 @@ defmodule OrgManagementSystem.Accounts do
 
   def list_permissions do
     OrgManagementSystem.Repo.all(OrgManagementSystem.Permission)
+  end
+
+  def list_organizations do
+    OrgManagementSystem.Repo.all(OrgManagementSystem.Organization)
   end
 
   def list_users_with_review_status do

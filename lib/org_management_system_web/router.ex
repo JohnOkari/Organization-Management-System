@@ -79,6 +79,7 @@ defmodule OrgManagementSystemWeb.Router do
     live_session :authenticated, on_mount: [{OrgManagementSystemWeb.UserAuth, :ensure_authenticated}] do
       live "/admin/users", UserManagementLive
       live "/admin/roles", RoleManagementLive
+      live "/admin/organizations", OrganizationManagementLive
       # ...other admin LiveViews
     end
 
