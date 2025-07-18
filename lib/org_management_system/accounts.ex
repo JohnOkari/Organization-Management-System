@@ -550,4 +550,24 @@ defmodule OrgManagementSystem.Accounts do
       {:error, _failed_op, changeset, _} -> {:error, changeset}
     end
   end
+
+  def list_users do
+    OrgManagementSystem.Repo.all(OrgManagementSystem.Accounts.User)
+  end
+
+  def list_roles do
+    OrgManagementSystem.Repo.all(OrgManagementSystem.Role)
+  end
+
+  def list_permissions do
+    OrgManagementSystem.Repo.all(OrgManagementSystem.Permission)
+  end
+
+  def list_users_with_review_status do
+    from(u in OrgManagementSystem.Accounts.User,
+      left_join: ur in OrgManagementSystem.UserReview, on: ur.user_id == u.id,
+      select: %{user: u, review_status: ur.status}
+    )
+    |> OrgManagementSystem.Repo.all()
+  end
 end

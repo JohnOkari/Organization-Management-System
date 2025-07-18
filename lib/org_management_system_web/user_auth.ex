@@ -145,23 +145,18 @@ defmodule OrgManagementSystemWeb.UserAuth do
         live "/profile", ProfileLive, :index
       end
   """
-  def on_mount(:mount_current_user, _params, session, socket) do
-    {:cont, mount_current_user(socket, session)}
-  end
-
   def on_mount(:ensure_authenticated, _params, session, socket) do
     socket = mount_current_user(socket, session)
-
-    if socket.assigns.current_user do
+    if socket.assigns[:current_user] do
       {:cont, socket}
     else
-      socket =
-        socket
-        |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
-        |> Phoenix.LiveView.redirect(to: ~p"/users/log_in")
-
+      socket = Phoenix.LiveView.redirect(socket, to: "/users/log_in")
       {:halt, socket}
     end
+  end
+
+  def on_mount(:mount_current_user, _params, session, socket) do
+    {:cont, mount_current_user(socket, session)}
   end
 
   def on_mount(:redirect_if_user_is_authenticated, _params, session, socket) do
@@ -172,6 +167,10 @@ defmodule OrgManagementSystemWeb.UserAuth do
     else
       {:cont, socket}
     end
+  end
+
+  def on_mount(:default, _params, _session, socket) do
+    {:cont, socket}
   end
 
   defp mount_current_user(socket, session) do

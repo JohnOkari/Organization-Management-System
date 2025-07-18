@@ -75,6 +75,13 @@ defmodule OrgManagementSystemWeb.Router do
   scope "/", OrgManagementSystemWeb do
     pipe_through [:browser]
 
+
+    live_session :authenticated, on_mount: [{OrgManagementSystemWeb.UserAuth, :ensure_authenticated}] do
+      live "/admin/users", UserManagementLive
+      live "/admin/roles", RoleManagementLive
+      # ...other admin LiveViews
+    end
+
     delete "/users/log_out", UserSessionController, :delete
 
     live_session :current_user,
