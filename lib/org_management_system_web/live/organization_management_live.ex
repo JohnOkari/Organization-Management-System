@@ -14,7 +14,7 @@ defmodule OrgManagementSystemWeb.OrganizationManagementLive do
     users = Accounts.list_organization_users(org.id)
     {:noreply, assign(socket, selected_org: org, users: users)}
   end
-  
+
   def handle_event("create_org", %{"organization" => org_params}, socket) do
     current_user = socket.assigns[:current_user]
     case Accounts.create_organization(org_params, current_user) do

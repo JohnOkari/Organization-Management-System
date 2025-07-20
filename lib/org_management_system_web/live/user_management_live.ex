@@ -23,13 +23,17 @@ defmodule OrgManagementSystemWeb.UserManagementLive do
   end
 
   def handle_event("invite_user", %{"name" => name, "email" => email}, socket) do
-    inviter = socket.assigns.current_user # Make sure you assign this in mount/3
-    case Accounts.invite_user(name, email, inviter) do
-      {:ok, _user} ->
-        users = Accounts.list_users()
-        {:noreply, assign(socket, users: users) |> put_flash(:info, "User invited!")}
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to invite user: #{inspect(reason)}")}
+    inviter = socket.assigns.current_user
+    if inviter.is_superuser do
+      case Accounts.invite_user(name, email, inviter) do
+        {:ok, _user} ->
+          users = Accounts.list_users()
+          {:noreply, assign(socket, users: users) |> put_flash(:info, "User invited!")}
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, "Failed to invite user: #{inspect(reason)}")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "Only superusers can invite users.")}
     end
   end
 

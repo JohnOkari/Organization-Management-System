@@ -559,6 +559,30 @@ defmodule OrgManagementSystem.Accounts do
     end
   end
 
+  def add_permission_to_role_by_id(permission_id, role_id) do
+    OrgManagementSystem.Repo.insert(
+      %OrgManagementSystem.RolePermission{}
+      |> Ecto.Changeset.change(%{role_id: role_id, permission_id: permission_id}),
+      on_conflict: :nothing
+    )
+  end
+
+  def list_permissions_for_role(role_id) do
+    from(p in OrgManagementSystem.Permission,
+      join: rp in OrgManagementSystem.RolePermission, on: rp.permission_id == p.id,
+      where: rp.role_id == ^role_id,
+      select: p
+    )
+    |> OrgManagementSystem.Repo.all()
+  end
+
+  def remove_permission_from_role(permission_id, role_id) do
+    OrgManagementSystem.Repo.delete_all(
+      from rp in OrgManagementSystem.RolePermission,
+        where: rp.role_id == ^role_id and rp.permission_id == ^permission_id
+    )
+  end
+
   def list_users do
     OrgManagementSystem.Repo.all(OrgManagementSystem.Accounts.User)
   end

@@ -45,12 +45,14 @@
     </div>
   <% end %>
 
-  <h3 class="text-lg font-semibold mb-2 text-gray-700">Invite User</h3>
-  <form phx-submit="invite_user" class="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-2 md:space-y-0 mb-2">
-    <input type="text" name="name" placeholder="Name" required class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200" />
-    <input type="email" name="email" placeholder="Email" required class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200" />
-    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Invite</button>
-  </form>
+  <%= if @current_user && @current_user.is_superuser do %>
+    <h3 class="text-lg font-semibold mb-2 text-gray-700">Invite User</h3>
+    <form phx-submit="invite_user" class="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-2 md:space-y-0 mb-2">
+      <input type="text" name="name" placeholder="Name" required class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+      <input type="email" name="email" placeholder="Email" required class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Invite</button>
+    </form>
+  <% end %>
 
   <%= if @flash[:info] do %>
     <div class="mt-4 p-2 bg-green-100 text-green-800 rounded"><%= @flash[:info] %></div>
