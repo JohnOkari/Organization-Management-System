@@ -17,7 +17,8 @@ defmodule OrgManagementSystemWeb.UserManagementLive do
   end
 
   def handle_event("assign_role", %{"user-id" => user_id, "role-id" => role_id, "org-id" => org_id}, socket) do
-    Accounts.assign_role(user_id, org_id, role_id)
+    granter_user = socket.assigns.current_user
+    Accounts.grant_role(user_id, org_id, role_id, granter_user)
     {:noreply, put_flash(socket, :info, "Role assigned!")}
   end
 

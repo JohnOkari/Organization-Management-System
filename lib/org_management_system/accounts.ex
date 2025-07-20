@@ -448,14 +448,21 @@ defmodule OrgManagementSystem.Accounts do
   end
 
   def grant_role(user_id, org_id, role_id, granter_user) do
-    with {:ok, user_org} <- Repo.get_by(UserOrganization, user_id: user_id, organization_id: org_id),
-         :ok <- has_permission?(granter_user, org_id, "grant_role") do
-      user_org
-      |> Ecto.Changeset.change(role_id: role_id)
-      |> Repo.update()
+    IO.inspect({:grant_role_called, user_id, org_id, role_id, granter_user}, label: "DEBUG grant_role")
+    if has_permission?(granter_user, org_id, "grant_role") do
+      case Repo.get_by(UserOrganization, user_id: user_id, organization_id: org_id) do
+        nil ->
+          # Insert new
+          attrs = %{user_id: user_id, organization_id: org_id, role_id: role_id}
+          Repo.insert(%UserOrganization{} |> Ecto.Changeset.change(attrs))
+        user_org ->
+          # Update existing
+          user_org
+          |> Ecto.Changeset.change(role_id: role_id)
+          |> Repo.update()
+      end
     else
-      {:error, :unauthorized} -> {:error, :unauthorized}
-      nil -> {:error, :not_found}
+      {:error, :unauthorized}
     end
   end
 

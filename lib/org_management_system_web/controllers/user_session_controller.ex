@@ -27,8 +27,8 @@ defmodule OrgManagementSystemWeb.UserSessionController do
       if review && review.status == "approved" do
         conn
         |> put_flash(:info, "Welcome back!")
+        |> put_session(:user_return_to, "/admin/users")
         |> UserAuth.log_in_user(user, user_params)
-        |> redirect(to: "/admin/users")
       else
         conn
         |> put_flash(:error, "Your account is not approved yet.")

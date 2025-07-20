@@ -20,7 +20,7 @@
       <select name="user-id" class="border rounded px-3 py-2">
         <option value="">Select User</option>
         <%= for user <- @users do %>
-          <option value={user.id}><%= user.name %> (<%= user.email %>)</option>
+          <option value={user.id}><%= user.name %></option>
         <% end %>
       </select>
       <select name="org-id" class="border rounded px-3 py-2">
