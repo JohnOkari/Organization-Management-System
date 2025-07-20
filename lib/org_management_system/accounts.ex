@@ -41,7 +41,8 @@ defmodule OrgManagementSystem.Accounts do
       true ->
         from(uo in OrgManagementSystem.UserOrganization,
           join: r in Role, on: uo.role_id == r.id,
-          join: p in Permission, on: p.role_id == r.id,
+          join: rp in OrgManagementSystem.RolePermission, on: rp.role_id == r.id,
+          join: p in Permission, on: p.id == rp.permission_id,
           where: uo.user_id == ^user.id and uo.organization_id == ^org_id and p.name == ^permission_name
         )
         |> Repo.exists?()
