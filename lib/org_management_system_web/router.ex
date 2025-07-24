@@ -18,6 +18,10 @@ defmodule OrgManagementSystemWeb.Router do
     plug OrgManagementSystemWeb.ApiAuthPlug
   end
 
+  pipeline :superuser_only do
+    plug OrgManagementSystemWeb.Plugs.RequireSuperuser
+  end
+
   scope "/", OrgManagementSystemWeb do
     pipe_through :browser
 
@@ -116,5 +120,11 @@ defmodule OrgManagementSystemWeb.Router do
     post "/roles/:role_id/permissions", RoleManagementController, :add_permission
 
 
+  end
+
+  scope "/admin", OrgManagementSystemWeb do
+    pipe_through [:browser, :require_authenticated_user, :superuser_only]
+    live "/roles", RoleManagementLive
+    live "/organizations", OrganizationManagementLive
   end
 end

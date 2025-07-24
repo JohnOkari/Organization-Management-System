@@ -41,7 +41,8 @@ defmodule OrgManagementSystem.Accounts do
       true ->
         from(uo in OrgManagementSystem.UserOrganization,
           join: r in Role, on: uo.role_id == r.id,
-          join: p in Permission, on: p.role_id == r.id,
+          join: rp in OrgManagementSystem.RolePermission, on: rp.role_id == r.id,
+          join: p in Permission, on: p.id == rp.permission_id,
           where: uo.user_id == ^user.id and uo.organization_id == ^org_id and p.name == ^permission_name
         )
         |> Repo.exists?()
@@ -448,14 +449,21 @@ defmodule OrgManagementSystem.Accounts do
   end
 
   def grant_role(user_id, org_id, role_id, granter_user) do
-    with {:ok, user_org} <- Repo.get_by(UserOrganization, user_id: user_id, organization_id: org_id),
-         :ok <- has_permission?(granter_user, org_id, "grant_role") do
-      user_org
-      |> Ecto.Changeset.change(role_id: role_id)
-      |> Repo.update()
+    IO.inspect({:grant_role_called, user_id, org_id, role_id, granter_user}, label: "DEBUG grant_role")
+    if has_permission?(granter_user, org_id, "grant_role") do
+      case Repo.get_by(UserOrganization, user_id: user_id, organization_id: org_id) do
+        nil ->
+          # Insert new
+          attrs = %{user_id: user_id, organization_id: org_id, role_id: role_id}
+          Repo.insert(%UserOrganization{} |> Ecto.Changeset.change(attrs))
+        user_org ->
+          # Update existing
+          user_org
+          |> Ecto.Changeset.change(role_id: role_id)
+          |> Repo.update()
+      end
     else
-      {:error, :unauthorized} -> {:error, :unauthorized}
-      nil -> {:error, :not_found}
+      {:error, :unauthorized}
     end
   end
 
@@ -549,6 +557,30 @@ defmodule OrgManagementSystem.Accounts do
       {:ok, role_permission} -> {:ok, role_permission}
       {:error, _failed_op, changeset, _} -> {:error, changeset}
     end
+  end
+
+  def add_permission_to_role_by_id(permission_id, role_id) do
+    OrgManagementSystem.Repo.insert(
+      %OrgManagementSystem.RolePermission{}
+      |> Ecto.Changeset.change(%{role_id: role_id, permission_id: permission_id}),
+      on_conflict: :nothing
+    )
+  end
+
+  def list_permissions_for_role(role_id) do
+    from(p in OrgManagementSystem.Permission,
+      join: rp in OrgManagementSystem.RolePermission, on: rp.permission_id == p.id,
+      where: rp.role_id == ^role_id,
+      select: p
+    )
+    |> OrgManagementSystem.Repo.all()
+  end
+
+  def remove_permission_from_role(permission_id, role_id) do
+    OrgManagementSystem.Repo.delete_all(
+      from rp in OrgManagementSystem.RolePermission,
+        where: rp.role_id == ^role_id and rp.permission_id == ^permission_id
+    )
   end
 
   def list_users do

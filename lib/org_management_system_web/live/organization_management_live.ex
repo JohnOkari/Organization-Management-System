@@ -18,7 +18,7 @@ defmodule OrgManagementSystemWeb.OrganizationManagementLive do
   def handle_event("create_org", %{"organization" => org_params}, socket) do
     current_user = socket.assigns[:current_user]
     case Accounts.create_organization(org_params, current_user) do
-      {:ok, org} ->
+      {:ok, _org} ->
         organizations = Accounts.list_organizations()
         {:noreply, assign(socket, organizations: organizations, org_changeset: Organization.changeset(%Organization{}, %{})) |> put_flash(:info, "Organization created!")}
       {:error, changeset} ->
@@ -43,4 +43,3 @@ defmodule OrgManagementSystemWeb.OrganizationManagementLive do
     end
   end
 end
-
