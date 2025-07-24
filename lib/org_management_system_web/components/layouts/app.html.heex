@@ -7,9 +7,9 @@
     <nav class="flex items-center gap-6 text-base font-medium">
       <%= if @current_user do %>
         <a href="/admin/users" class="hover:text-blue-200 transition">User Management</a>
+          <a href="/admin/organizations" class="hover:text-blue-200 transition">Organization Management</a>
         <%= if @current_user && @current_user.is_superuser do %>
           <a href="/admin/roles" class="hover:text-blue-200 transition">Role Management</a>
-          <a href="/admin/organizations" class="hover:text-blue-200 transition">Organization Management</a>
         <% end %>
       <% end %>
     </nav>
